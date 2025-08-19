@@ -339,6 +339,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // ===== 탭, 통계, 커뮤니티 등 전역 함수들 =====
 // ==================================================================
 
+// ※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※
+// ※ 중요! 1단계에서 복사한 자신의 Worker 주소를 여기에 붙여넣으세요! ※
+// ※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※
+const WORKER_URL = 'https://lotto-community-api.resong84.workers.dev'; 
+// ※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※
+
 let selectedGame = 'A';
 let selectedNums = {A:[], B:[]};
 let isWinFound = false;
@@ -350,6 +356,10 @@ function showTab(tabIdx) {
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
     document.getElementById(`tab${tabIdx}`).classList.add('active');
     document.querySelector(`.tab-button:nth-child(${tabIdx})`).classList.add('active');
+
+    if (tabIdx === 4) {
+        loadPosts();
+    }
 }
 
 function renderLottoPaper() {
@@ -592,53 +602,79 @@ function updateImageName(inputId, nameId) {
     }
 }
 
-function createPost() {
+async function loadPosts() {
+    const feed = document.getElementById('community-feed');
+    feed.innerHTML = '게시글을 불러오는 중...'; 
+
+    try {
+        const response = await fetch(`${WORKER_URL}/posts`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const posts = await response.json();
+        
+        feed.innerHTML = ''; 
+        if (posts.length === 0) {
+            feed.innerHTML = '<div style="text-align:center; color:#888;">아직 게시글이 없습니다.</div>';
+            return;
+        }
+
+        posts.forEach(post => {
+            const postElement = document.createElement('div');
+            postElement.className = 'community-post';
+
+            const textContainer = post.content ? `<div class="post-text">${post.content.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>` : '';
+            const authorContainer = `<div class="post-author"><strong>${post.nickname.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</strong></div>`;
+            
+            const imagesContainer = '';
+
+            postElement.innerHTML = authorContainer + textContainer + imagesContainer;
+            feed.appendChild(postElement); 
+        });
+
+    } catch (e) {
+        feed.innerHTML = `<div style="text-align:center; color:red;">게시글을 불러오는 데 실패했습니다: ${e.message}</div>`;
+    }
+}
+
+async function createPost() {
     const nicknameInput = document.getElementById('nickname-input');
     const nickname = nicknameInput.value.trim();
-    const text = document.getElementById('community-text').value;
-    const imageFile1 = document.getElementById('image-upload1').files[0];
-    const imageFile2 = document.getElementById('image-upload2').files[0];
-    const feed = document.getElementById('community-feed');
+    const text = document.getElementById('community-text').value.trim();
+    const postButton = document.getElementById('post-button');
 
-    if (!text && !imageFile1 && !imageFile2) {
-        alert("글 또는 이미지를 입력해주세요.");
+    if (!text) { 
+        alert("글 내용을 입력해주세요.");
         return;
     }
 
-    if (!localStorage.getItem('lottoAppNickname')) {
-        localStorage.setItem('lottoAppNickname', nickname);
-        nicknameInput.readOnly = true;
-    }
+    postButton.disabled = true; 
+    postButton.textContent = '등록 중...';
 
-    const postElement = document.createElement('div');
-    postElement.className = 'community-post';
-
-    const imagePromises = [];
-
-    const processImage = (file) => {
-        return new Promise((resolve) => {
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    resolve(`<img src="${e.target.result}" alt="uploaded-image">`);
-                };
-                reader.readAsDataURL(file);
-            } else {
-                resolve('');
-            }
-        });
+    const postData = {
+        nickname: nickname,
+        content: text,
+        image1_url: null, 
+        image2_url: null
     };
 
-    imagePromises.push(processImage(imageFile1));
-    imagePromises.push(processImage(imageFile2));
+    try {
+        const response = await fetch(`${WORKER_URL}/posts`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(postData),
+        });
 
-    Promise.all(imagePromises).then(resolvedImages => {
-        const imagesContainer = resolvedImages.join('') ? `<div class="post-images">${resolvedImages.join('')}</div>` : '';
-        const textContainer = text ? `<div class="post-text">${text.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>` : '';
-        const authorContainer = `<div class="post-author"><strong>${nickname.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</strong></div>`;
-        
-        postElement.innerHTML = authorContainer + textContainer + imagesContainer;
-        feed.prepend(postElement);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        if (!localStorage.getItem('lottoAppNickname')) {
+            localStorage.setItem('lottoAppNickname', nickname);
+            nicknameInput.readOnly = true;
+        }
 
         document.getElementById('community-text').value = '';
         document.getElementById('image-upload1').value = '';
@@ -646,7 +682,15 @@ function createPost() {
         document.getElementById('char-counter').textContent = '0 / 20';
         updateImageName('image-upload1', 'image-name1');
         updateImageName('image-upload2', 'image-name2');
-    });
+
+        await loadPosts();
+
+    } catch (e) {
+        alert(`글을 등록하는 데 실패했습니다: ${e.message}`);
+    } finally {
+        postButton.disabled = false; 
+        postButton.textContent = '글쓰기';
+    }
 }
 
 // lottoData 객체는 파일 크기가 매우 크므로, 기존 코드에서 생략된 부분을 그대로 유지합니다.

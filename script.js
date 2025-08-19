@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadFirstPlaceData() {
+        firstPlaceNumbers = new Set(); 
         try {
             const response = await fetch('lotto_data_1st_number.txt');
             if (!response.ok) {
@@ -37,9 +38,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const dataText = await response.text();
             const lines = dataText.trim().split('\n');
-            lines.forEach(line => {
-                const numbers = line.split(',').map(num => parseInt(num.trim()));
-                numbers.forEach(num => firstPlaceNumbers.add(num));
+
+            lines.forEach((line, index) => {
+                if (index === 0 || line.trim() === '') {
+                    return;
+                }
+                const parts = line.split('\t');
+                if (parts.length < 8) {
+                    return; 
+                }
+                const winningNumbers = parts.slice(1, 7);
+                const combinationString = winningNumbers
+                                              .map(num => parseInt(num.trim()))
+                                              .sort((a, b) => a - b)
+                                              .join(',');
+                
+                firstPlaceNumbers.add(combinationString);
             });
         } catch (e) {
             console.warn(`'lotto_data_1st_number.txt' 파일을 불러오는 데 실패했습니다: ${e.message}. '1등 번호 제외' 기능이 작동하지 않을 수 있습니다.`);
@@ -111,44 +125,47 @@ document.addEventListener('DOMContentLoaded', () => {
             return null;
         }
 
-        const base_column_name = column_name.replace('확률', ''); // e.g., "1칸"
-        const min_appearance = parseInt(document.getElementById('min-appearance-select').value);
+        const base_column_name = column_name.replace('확률', ''); 
+        let initial_rows = prob_df.data;
 
-        // 1. 최소 등장 횟수 필터링
-        let filtered_by_appearance = prob_df.data.filter(row => {
-            const count = row[base_column_name];
-            return count > min_appearance;
-        });
+        if (selection_type === 'random') {
+            const min_appearance = parseInt(document.getElementById('min-appearance-select').value);
+            initial_rows = prob_df.data.filter(row => {
+                const count = row[base_column_name];
+                return count > min_appearance;
+            });
+        }
 
-        // 2. 선택 타입(높은/낮은/랜덤)에 따른 필터링
         let eligible_rows = [];
         if (selection_type === 'top') {
-            eligible_rows = filtered_by_appearance.filter(row => row[column_name] > 2);
+            eligible_rows = initial_rows.filter(row => row[column_name] > 2);
         } else if (selection_type === 'bottom') {
-            eligible_rows = filtered_by_appearance.filter(row => row[column_name] >= 0.2 && row[column_name] <= 2.5);
-        } else { // 'random'
-            eligible_rows = filtered_by_appearance.filter(row => row[column_name] > 0);
+            eligible_rows = initial_rows.filter(row => row[column_name] >= 0.2 && row[column_name] <= 2.5);
+        } else { 
+            eligible_rows = initial_rows;
         }
         
         let eligible_numbers = eligible_rows.map(row => row.번호);
-
-        // 3. 이미 선택된 번호 및 1등 당첨 번호(옵션) 제외
         let final_eligible_numbers = eligible_numbers.filter(num => !exclude_numbers.has(num));
 
         if (final_eligible_numbers.length === 0) {
-            // 필터링 후 남은 번호가 없으면, 필터링 조건을 완화하여 다시 시도 (최소 등장 횟수 필터만 적용)
-            final_eligible_numbers = prob_df.data
-                .filter(row => row[base_column_name] > min_appearance)
-                .map(row => row.번호)
-                .filter(num => !exclude_numbers.has(num));
-            
-            if (final_eligible_numbers.length === 0) return null; // 그래도 없으면 null 반환
+            if (selection_type === 'random') {
+                 const min_appearance = parseInt(document.getElementById('min-appearance-select').value);
+                 final_eligible_numbers = prob_df.data
+                    .filter(row => row[base_column_name] > min_appearance)
+                    .map(row => row.번호)
+                    .filter(num => !exclude_numbers.has(num));
+            } else {
+                 final_eligible_numbers = prob_df.data
+                    .map(row => row.번호)
+                    .filter(num => !exclude_numbers.has(num));
+            }
+            if (final_eligible_numbers.length === 0) return null;
         }
 
         return final_eligible_numbers[Math.floor(Math.random() * final_eligible_numbers.length)];
     }
 
-    // --- Combination Generation Logic ---
     function generateCombinations() {
         if (!probDf) {
             alert("데이터가 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.");
@@ -177,21 +194,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        for (let i = 0; i < numToGenerate; i++) {
+        let generatedCount = 0;
+        let attempts = 0; 
+        const maxAttempts = numToGenerate * 200; 
+
+        while (generatedCount < numToGenerate && attempts < maxAttempts) {
+            attempts++;
             const finalCombinationSet = new Set();
             const randomSelectedNumbers = []; 
             
-            // 제외할 번호 목록 생성 (1등 당첨 번호 포함 여부 결정)
-            const exclusionSet = excludeWinnersCheckbox.checked ? new Set(firstPlaceNumbers) : new Set();
-
             for (let colNum = 1; colNum <= 6; colNum++) {
                 if (finalCombinationSet.size >= 6) break;
 
                 const colType = columnSelectionChoices[colNum];
                 const columnName = `${colNum}칸확률`;
                 
-                // 현재 조합에서 이미 선택된 번호도 제외 목록에 추가
-                finalCombinationSet.forEach(num => exclusionSet.add(num));
+                const exclusionSet = new Set(finalCombinationSet);
 
                 const selectedNum = get_random_number_from_column(
                     probDf,
@@ -208,25 +226,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            // 필터링 조건이 너무 까다로워 6개를 채우지 못한 경우, 전체 랜덤으로 채움
-            const globalExclusionSet = excludeWinnersCheckbox.checked ? new Set(firstPlaceNumbers) : new Set();
-            finalCombinationSet.forEach(num => globalExclusionSet.add(num));
-
             while (finalCombinationSet.size < 6) {
                 const randomNumber = Math.floor(Math.random() * 45) + 1;
-                if (!globalExclusionSet.has(randomNumber)) {
+                if (!finalCombinationSet.has(randomNumber)) {
                     finalCombinationSet.add(randomNumber);
-                    globalExclusionSet.add(randomNumber); // 다음 랜덤 번호 생성 시 중복 방지
                 }
             }
 
-            let finalCombinationList = Array.from(finalCombinationSet);
-            finalCombinationList.sort((a, b) => a - b);
+            let finalCombinationList = Array.from(finalCombinationSet).sort((a, b) => a - b);
 
+            if (excludeWinnersCheckbox.checked) {
+                const combinationString = finalCombinationList.join(',');
+                if (firstPlaceNumbers.has(combinationString)) {
+                    continue; 
+                }
+            }
+
+            generatedCount++;
             const resultDiv = document.createElement('div');
             resultDiv.classList.add('combination-result');
 
-            const combinationNumber = i + 1;
+            const combinationNumber = generatedCount;
             const spacing = combinationNumber < 10 ? `&nbsp;&nbsp;` : ` `;
             const combinationText = `<strong>${combinationNumber}:</strong>${spacing}<span class="combination-numbers">[${finalCombinationList.join(', ')}]</span>`;
             
@@ -238,11 +258,15 @@ document.addEventListener('DOMContentLoaded', () => {
             resultDiv.innerHTML = `${combinationText} ${randomValueText}`;
             outputText.appendChild(resultDiv);
 
-            if ((i + 1) % 5 === 0 && (i + 1) < numToGenerate) {
+            if (generatedCount % 5 === 0 && generatedCount < numToGenerate) {
                 const spacer = document.createElement('div');
                 spacer.style.height = '1em';
                 outputText.appendChild(spacer);
             }
+        }
+
+        if (attempts >= maxAttempts && generatedCount < numToGenerate) {
+            alert("유효한 조합을 찾는 데 시간이 너무 오래 걸립니다. 필터링 조건이 너무 엄격할 수 있습니다.");
         }
     }
 
@@ -282,16 +306,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const postButton = document.getElementById('post-button');
     const imageUpload1 = document.getElementById('image-upload1');
     const imageUpload2 = document.getElementById('image-upload2');
+    const nicknameInput = document.getElementById('nickname-input');
 
     communityText.addEventListener('input', () => {
         const currentLength = communityText.value.length;
-        charCounter.textContent = `${currentLength} / 100`;
+        charCounter.textContent = `${currentLength} / 20`;
     });
     
     imageUpload1.addEventListener('change', () => updateImageName('image-upload1', 'image-name1'));
     imageUpload2.addEventListener('change', () => updateImageName('image-upload2', 'image-name2'));
 
     postButton.addEventListener('click', createPost);
+
+    const savedNickname = localStorage.getItem('lottoAppNickname');
+    if (savedNickname) {
+        nicknameInput.value = savedNickname;
+        nicknameInput.readOnly = true; 
+        postButton.disabled = false; 
+    }
+
+    nicknameInput.addEventListener('input', () => {
+        if (nicknameInput.value.trim().length > 0) {
+            postButton.disabled = false;
+        } else {
+            postButton.disabled = true;
+        }
+    });
 });
 
 
@@ -303,6 +343,7 @@ let selectedGame = 'A';
 let selectedNums = {A:[], B:[]};
 let isWinFound = false;
 let autoGenerateInterval = null;
+let autoGenerateCount = 0;
 
 function showTab(tabIdx) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -363,6 +404,7 @@ function autoSelect(game, event) {
 function autoSelectAll() {
     const autoGenerateCheckbox = document.getElementById('auto-generate-checkbox');
     const autoSelectAllBtn = document.getElementById('autoSelectAllBtn');
+    const counterSpan = document.getElementById('auto-gen-counter');
 
     if (autoGenerateInterval) {
         clearInterval(autoGenerateInterval);
@@ -373,6 +415,9 @@ function autoSelectAll() {
     }
 
     const runSingleCycle = () => {
+        autoGenerateCount++; 
+        counterSpan.textContent = `총 ${autoGenerateCount}회`; 
+
         ['A','B'].forEach(game => {
             let nums = [];
             while(nums.length < 6) {
@@ -385,7 +430,9 @@ function autoSelectAll() {
         checkLottoStats();
     };
 
-    runSingleCycle();
+    autoGenerateCount = 0; 
+    counterSpan.style.display = 'inline'; 
+    runSingleCycle(); 
 
     if (autoGenerateCheckbox.checked) {
         if (isWinFound) {
@@ -397,7 +444,11 @@ function autoSelectAll() {
         document.getElementById('resetBtn').disabled = true;
         
         const speed = parseInt(document.querySelector('input[name="speed-control"]:checked').value);
-        document.getElementById('speed-display').textContent = `x${1000/speed}`;
+        
+        let speedText = 'x1';
+        if (speed === 333) speedText = 'x3';
+        if (speed === 200) speedText = 'x5';
+        document.getElementById('speed-display').textContent = speedText;
 
         autoGenerateInterval = setInterval(() => {
             runSingleCycle();
@@ -441,11 +492,14 @@ function resetLottoStats() {
     document.getElementById('userComboProb').innerHTML = '';
     document.getElementById('statDetailResultA').innerHTML = '';
     document.getElementById('statDetailResultB').innerHTML = '';
+    
+    autoGenerateCount = 0;
+    const counterSpan = document.getElementById('auto-gen-counter');
+    counterSpan.textContent = '';
+    counterSpan.style.display = 'none';
 }
 
 function getCombinationProbability(numbers) {
-    // 이 함수는 lottoData 객체를 사용하므로, 해당 객체가 정의된 후에 호출되어야 합니다.
-    // 현재 코드에서는 lottoData가 하드코딩되어 있어 문제가 없습니다.
     let sum = 0;
     const sortedNumbers = [...numbers].sort((a, b) => a - b);
     for (let i = 0; i < 6; i++) {
@@ -539,6 +593,8 @@ function updateImageName(inputId, nameId) {
 }
 
 function createPost() {
+    const nicknameInput = document.getElementById('nickname-input');
+    const nickname = nicknameInput.value.trim();
     const text = document.getElementById('community-text').value;
     const imageFile1 = document.getElementById('image-upload1').files[0];
     const imageFile2 = document.getElementById('image-upload2').files[0];
@@ -549,10 +605,14 @@ function createPost() {
         return;
     }
 
+    if (!localStorage.getItem('lottoAppNickname')) {
+        localStorage.setItem('lottoAppNickname', nickname);
+        nicknameInput.readOnly = true;
+    }
+
     const postElement = document.createElement('div');
     postElement.className = 'community-post';
 
-    let imagesHtml = '';
     const imagePromises = [];
 
     const processImage = (file) => {
@@ -575,15 +635,15 @@ function createPost() {
     Promise.all(imagePromises).then(resolvedImages => {
         const imagesContainer = resolvedImages.join('') ? `<div class="post-images">${resolvedImages.join('')}</div>` : '';
         const textContainer = text ? `<div class="post-text">${text.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>` : '';
+        const authorContainer = `<div class="post-author"><strong>${nickname.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</strong></div>`;
         
-        postElement.innerHTML = textContainer + imagesContainer;
+        postElement.innerHTML = authorContainer + textContainer + imagesContainer;
         feed.prepend(postElement);
 
-        // 입력 필드 초기화
         document.getElementById('community-text').value = '';
         document.getElementById('image-upload1').value = '';
         document.getElementById('image-upload2').value = '';
-        document.getElementById('char-counter').textContent = '0 / 100';
+        document.getElementById('char-counter').textContent = '0 / 20';
         updateImageName('image-upload1', 'image-name1');
         updateImageName('image-upload2', 'image-name2');
     });

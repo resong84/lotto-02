@@ -87,6 +87,7 @@
                         <div style="text-align:center;margin:18px 0 8px 0;">
                             <button class="stat-btn" id="resetBtn" onclick="resetLottoStats()" style="margin-left:0;">초기화</button>
                             <button class="stat-btn" id="autoSelectAllBtn" onclick="autoSelectAll()" style="margin-left:12px;">랜덤 번호 조합</button>
+                            <span id="auto-gen-counter"></span>
                         </div>
                         <div id="userComboProb" style="text-align:center;color:#2c3e50;font-size:16px;margin-bottom:8px;"></div>
                     </div>
@@ -100,25 +101,36 @@
                             <input type="checkbox" id="exclude-winners-checkbox" class="adv-checkbox">
                         </div>
                         <div class="setting-item">
-                            <label for="min-appearance-select">랜덤 선택 시 최소 등장 횟수 (이하 제외)</label>
+                            <label for="min-appearance-select">번호 생성기 '랜덤' 선택 시 최소 등장 횟수</label>
                             <select id="min-appearance-select" class="adv-select">
                                 <option value="0">0회</option>
                                 <option value="1">1회</option>
                                 <option value="2">2회</option>
                                 <option value="3">3회</option>
                                 <option value="4">4회</option>
+                                <option value="5">5회</option>
+                                <option value="6">6회</option>
+                                <option value="7">7회</option>
+                                <option value="8">8회</option>
+                                <option value="9">9회</option>
+                                <option value="10">10회</option>
+                                <option value="11">11회</option>
+                                <option value="12">12회</option>
+                                <option value="13">13회</option>
+                                <option value="14">14회</option>
+                                <option value="15">15회</option>
                             </select>
                         </div>
                         <div class="setting-item">
                             <label>자동 생성 속도 조절</label>
                             <div class="adv-radio-group">
                                 <input type="radio" id="speed-x1" name="speed-control" value="1000" checked><label for="speed-x1">x1</label>
-                                <input type="radio" id="speed-x0.5" name="speed-control" value="2000"><label for="speed-x0.5">x0.5</label>
-                                <input type="radio" id="speed-x0.1" name="speed-control" value="10000"><label for="speed-x0.1">x0.1</label>
+                                <input type="radio" id="speed-x3" name="speed-control" value="333"><label for="speed-x3">x3</label>
+                                <input type="radio" id="speed-x5" name="speed-control" value="200"><label for="speed-x5">x5</label>
                             </div>
                         </div>
                         <div class="setting-item">
-                            <label>사운드 ON/OFF</label>
+                            <label>자동 생성 시 사운드 ON/OFF</label>
                             <div class="adv-radio-group">
                                 <input type="radio" id="sound-on" name="sound-control" value="0.7" checked><label for="sound-on">ON</label>
                                 <input type="radio" id="sound-off" name="sound-control" value="0"><label for="sound-off">OFF</label>
@@ -131,8 +143,12 @@
                 <div id="tab4" class="tab-content">
                     <div class="community-container">
                         <div class="community-post-box">
-                            <textarea id="community-text" placeholder="100자 내로 글을 남겨보세요..." maxlength="100"></textarea>
-                            <div id="char-counter">0 / 100</div>
+                            <div class="nickname-wrapper">
+                                <label for="nickname-input">닉네임:</label>
+                                <input type="text" id="nickname-input" placeholder="닉네임을 입력하세요" maxlength="10">
+                            </div>
+                            <textarea id="community-text" placeholder="20자 내로 글을 남겨보세요..." maxlength="20"></textarea>
+                            <div id="char-counter">0 / 20</div>
                             <div class="community-actions">
                                 <div class="image-upload-wrapper">
                                     <label for="image-upload1" class="image-upload-btn">이미지1</label>
@@ -142,7 +158,7 @@
                                     <input type="file" id="image-upload2" accept="image/*" class="image-upload-input">
                                     <span id="image-name2" class="image-name"></span>
                                 </div>
-                                <button id="post-button">글쓰기</button>
+                                <button id="post-button" disabled>글쓰기</button>
                             </div>
                         </div>
                         <div id="community-feed">

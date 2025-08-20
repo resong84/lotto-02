@@ -12,8 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     startButton.addEventListener('click', () => {
         landingPage.style.display = 'none';
         mainApp.style.display = 'block';
-        // 변경 시작: 앱이 표시된 후 탭 높이 계산 함수 호출
-        adjustTabContentHeight();
+        adjustLayout();
     });
     // --- 랜딩 페이지 로직 끝 ---
 
@@ -187,8 +186,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let numToGenerate;
         try {
             numToGenerate = parseInt(numCombinationsInput.value);
-            if (isNaN(numToGenerate) || numToGenerate < 1 || numToGenerate > 20) {
-                alert("생성할 조합 개수는 1에서 20 사이의 숫자여야 합니다.");
+            if (isNaN(numToGenerate) || numToGenerate < 1 || numToGenerate > 5) { // 최대값 5로 수정
+                alert("생성할 조합 개수는 1에서 5 사이의 숫자여야 합니다.");
                 return;
             }
         } catch (e) {
@@ -312,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     communityText.addEventListener('input', () => {
         const currentLength = communityText.value.length;
-        charCounter.textContent = `${currentLength} / 20`;
+        charCounter.textContent = `${currentLength} / 30`;
     });
     
     imageUpload1.addEventListener('change', () => updateImageName('image-upload1', 'image-name1'));
@@ -324,25 +323,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedNickname) {
         nicknameInput.value = savedNickname;
         nicknameInput.readOnly = true; 
-        postButton.disabled = false; 
+        validateAndSetPostButton();
     }
 
-    nicknameInput.addEventListener('input', () => {
-        if (nicknameInput.value.trim().length > 0) {
-            postButton.disabled = false;
-        } else {
-            postButton.disabled = true;
-        }
-    });
+    nicknameInput.addEventListener('input', validateAndSetPostButton);
 
-    // 변경 시작: '게임 추가하기' 버튼 이벤트 리스너
+    function validateAndSetPostButton() {
+        const { isValid } = validateNickname(nicknameInput.value);
+        postButton.disabled = !isValid;
+    }
+
     const addGameBtn = document.getElementById('add-game-btn');
     addGameBtn.addEventListener('click', () => {
-        document.getElementById('lotto-game-row-B').style.display = 'flex';
-        document.getElementById('add-game-container').style.display = 'none';
-        adjustTabContentHeight(); // 탭 높이 재조정
+        document.getElementById('lotto-game-B').style.display = 'flex';
+        document.getElementById('statDetailResultB').style.display = 'block';
+        document.getElementById('game-B-placeholder').style.display = 'none';
+        adjustLayout(); 
     });
-    // 변경 끝
+
+    window.addEventListener('resize', adjustLayout);
 });
 
 
@@ -358,20 +357,24 @@ let isWinFound = false;
 let autoGenerateInterval = null;
 let autoGenerateCount = 0;
 
-// 변경 시작: 탭 높이 고정 함수 추가 및 showTab 수정
-function adjustTabContentHeight() {
+function adjustLayout() {
     const contentLayer = document.querySelector('.content-layer');
     const tabContents = document.querySelectorAll('.tab-content');
     let maxHeight = 0;
 
     tabContents.forEach(tab => {
-        // display를 잠시 block으로 바꿔야 정확한 높이 측정이 가능
         const originalDisplay = tab.style.display;
-        tab.style.display = 'block';
+        tab.style.position = 'absolute';
+        tab.style.visibility = 'hidden';
+        tab.style.display = 'flex';
+
         if (tab.scrollHeight > maxHeight) {
             maxHeight = tab.scrollHeight;
         }
-        tab.style.display = originalDisplay; // 원래 상태로 복구
+
+        tab.style.position = '';
+        tab.style.visibility = '';
+        tab.style.display = originalDisplay;
     });
 
     contentLayer.style.minHeight = `${maxHeight}px`;
@@ -386,10 +389,8 @@ function showTab(tabIdx) {
     if (tabIdx === 4) {
         loadPosts();
     }
-    // 탭 전환 시 높이 재조정
-    adjustTabContentHeight();
+    adjustLayout();
 }
-// 변경 끝
 
 function renderLottoPaper() {
     ['A','B'].forEach(game => {
@@ -405,7 +406,9 @@ function renderLottoPaper() {
             if (!selectedNums[game].includes(i) && selectedNums[game].length >= 6) {
                 btn.classList.add('disabled');
             }
-            btn.innerText = i;
+            
+            btn.innerHTML = `<span>${i}</span>`;
+
             btn.onclick = () => {
                 selectedGame = game;
                 if(selectedNums[game].includes(i)) {
@@ -484,12 +487,11 @@ function autoSelectAll() {
         
         const speed = parseInt(document.querySelector('input[name="speed-control"]:checked').value);
         
-        // 변경 시작: x1 표시 제거
         let speedText = '';
         if (speed === 333) speedText = 'x3';
         if (speed === 200) speedText = 'x5';
+        if (speed === 100) speedText = 'x10';
         document.getElementById('speed-display').textContent = speedText;
-        // 변경 끝
 
         autoGenerateInterval = setInterval(() => {
             runSingleCycle();
@@ -519,7 +521,6 @@ function playWinSound() {
     }
 }
 
-// 변경 시작: 리셋 시 B 게임판과 추가 버튼 상태도 초기화
 function resetLottoStats() {
     if (autoGenerateInterval) {
         clearInterval(autoGenerateInterval);
@@ -540,12 +541,11 @@ function resetLottoStats() {
     counterSpan.textContent = '';
     counterSpan.style.display = 'none';
 
-    // B 게임판과 추가 버튼 상태 초기화
-    document.getElementById('lotto-game-row-B').style.display = 'none';
-    document.getElementById('add-game-container').style.display = 'block';
-    adjustTabContentHeight(); // 탭 높이 재조정
+    document.getElementById('lotto-game-B').style.display = 'none';
+    document.getElementById('statDetailResultB').style.display = 'none';
+    document.getElementById('game-B-placeholder').style.display = 'flex';
+    adjustLayout(); 
 }
-// 변경 끝
 
 function getCombinationProbability(numbers) {
     let sum = 0;
@@ -595,24 +595,28 @@ function checkLottoStats() {
                 if (arr.length === 0) return '';
                 if (rank <= maxRank) {
                     isWinFound = true;
-                    let part = `<div class="rank-title rank-title-${rank}">${title} (${arr.length}회)</div><ul>`;
+                    let listItems = '';
                     arr.forEach(item => {
                         const matchedNums = nums;
                         const winNums = item.numbers.map(n => matchedNums.includes(n) ? `<b>${n}</b>` : `<span class="non-winning-num">${n}</span>`).join(', ');
-                        part += `<li class="partition-${rank}">${item.draw}회 [${winNums}]</li>`;
+                        listItems += `<li class="partition-${rank}">${title} - ${item.draw}회 [${winNums}]</li>`;
                     });
-                    part += '</ul>';
-                    return part;
+                    return listItems;
                 }
                 return '';
             }
-
-            gameHtml += makePartition('🥇 1등', first, 1);
-            gameHtml += makePartition('🥈 2등', second, 2);
-            gameHtml += makePartition('🥉 3등', third, 3);
-            gameHtml += makePartition('🏅 4등', fourth, 4);
             
-            resultContainer.innerHTML = gameHtml || '<div style="color:#888;text-align:center;padding-top:60px;">일치 내역이 없습니다.</div>';
+            let fullList = '';
+            fullList += makePartition('🥇 1등', first, 1);
+            fullList += makePartition('🥈 2등', second, 2);
+            fullList += makePartition('🥉 3등', third, 3);
+            fullList += makePartition('🏅 4등', fourth, 4);
+
+            if(fullList) {
+                gameHtml = `<ul>${fullList}</ul>`;
+            }
+            
+            resultContainer.innerHTML = gameHtml || '<div style="color:#888;text-align:center;padding-top:25px;">일치 내역이 없습니다.</div>';
         } else {
             resultContainer.innerHTML = '';
         }
@@ -633,10 +637,13 @@ function updateSliderTrack() {
 function updateImageName(inputId, nameId) {
     const input = document.getElementById(inputId);
     const nameSpan = document.getElementById(nameId);
+    const label = document.querySelector(`label[for="${inputId}"]`);
     if (input.files.length > 0) {
         nameSpan.textContent = input.files[0].name;
+        label.classList.add('uploaded');
     } else {
         nameSpan.textContent = '';
+        label.classList.remove('uploaded');
     }
 }
 
@@ -675,11 +682,52 @@ async function loadPosts() {
     }
 }
 
+function validateNickname(nickname) {
+    const trimmed = nickname.trim();
+    
+    if (trimmed.length === 0) {
+        return { isValid: false, message: "닉네임을 입력해주세요." };
+    }
+
+    const specialCharRegex = /^[a-zA-Z0-9ㄱ-ㅎㅏ-ㅣ가-힣_-]+$/;
+    if (!specialCharRegex.test(trimmed)) {
+        return { isValid: false, message: "닉네임에는 특수문자를 사용할 수 없습니다. (-, _ 제외)" };
+    }
+
+    const profanityList = ["바보", "멍청이", "개새끼", "씨발", "시발"];
+    for (const word of profanityList) {
+        if (trimmed.includes(word)) {
+            return { isValid: false, message: "닉네임에 비속어를 사용할 수 없습니다." };
+        }
+    }
+
+    let byteLength = 0;
+    for (let i = 0; i < trimmed.length; i++) {
+        const charCode = trimmed.charCodeAt(i);
+        if (charCode > 127) {
+            byteLength += 2;
+        } else {
+            byteLength += 1;
+        }
+    }
+    if (byteLength > 10) {
+        return { isValid: false, message: "닉네임은 10바이트를 초과할 수 없습니다. (한글 2바이트, 영문/숫자 1바이트)" };
+    }
+
+    return { isValid: true, message: "사용 가능한 닉네임입니다." };
+}
+
 async function createPost() {
     const nicknameInput = document.getElementById('nickname-input');
     const nickname = nicknameInput.value.trim();
     const text = document.getElementById('community-text').value.trim();
     const postButton = document.getElementById('post-button');
+
+    const validation = validateNickname(nickname);
+    if (!validation.isValid) {
+        alert(validation.message);
+        return;
+    }
 
     if (!text) { 
         alert("글 내용을 입력해주세요.");
@@ -717,7 +765,7 @@ async function createPost() {
         document.getElementById('community-text').value = '';
         document.getElementById('image-upload1').value = '';
         document.getElementById('image-upload2').value = '';
-        document.getElementById('char-counter').textContent = '0 / 20';
+        document.getElementById('char-counter').textContent = '0 / 30';
         updateImageName('image-upload1', 'image-name1');
         updateImageName('image-upload2', 'image-name2');
 
@@ -731,8 +779,6 @@ async function createPost() {
     }
 }
 
-// lottoData 객체는 파일 크기가 매우 크므로, 기존 코드에서 생략된 부분을 그대로 유지합니다.
-// 이 객체는 getCombinationProbability 함수에서 사용됩니다.
 const lottoData = {
     "1칸확률": { 1: 12.83, 2: 12.40, 3: 9.43, 4: 10.20, 5: 7.82, 6: 7.22, 7: 5.52, 8: 4.84, 9: 5.95, 10: 4.16, 11: 3.82, 12: 3.23, 13: 1.87, 14: 2.04, 15: 1.87, 16: 1.44, 17: 0.85, 18: 0.93, 19: 0.51, 20: 0.93, 21: 0.17, 22: 0.34, 23: 0.51, 24: 0.42, 25: 0.17, 26: 0.25, 27: 0.17, 28: 0.00, 29: 0.08, 30: 0.00, 31: 0.00, 32: 0.00, 33: 0.00, 34: 0.00, 35: 0.00, 36: 0.00, 37: 0.00, 38: 0.00, 39: 0.00, 40: 0.00, 41: 0.00, 42: 0.00, 43: 0.00, 44: 0.00, 45: 0.00 },
     "2칸확률": { 1: 0.00, 2: 1.44, 3: 2.72, 4: 3.91, 5: 4.93, 6: 4.50, 7: 4.50, 8: 5.61, 9: 5.69, 10: 5.95, 11: 6.12, 12: 6.46, 13: 4.84, 14: 3.99, 15: 4.16, 16: 4.33, 17: 3.82, 18: 4.50, 19: 4.25, 20: 2.89, 21: 2.12, 22: 2.12, 23: 0.85, 24: 1.87, 25: 1.61, 26: 1.44, 27: 1.44, 28: 0.93, 29: 0.85, 30: 0.59, 31: 0.68, 32: 0.25, 33: 0.08, 34: 0.25, 35: 0.08, 36: 0.08, 37: 0.08, 38: 0.00, 39: 0.00, 40: 0.00, 41: 0.00, 42: 0.00, 43: 0.00, 44: 0.00, 45: 0.00 },

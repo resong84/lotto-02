@@ -41,7 +41,11 @@
                             <div class="control-group"><label for="num5">5칸:</label><select id="num5"><option value="random">랜덤</option><option value="top">높은 확률</option><option value="bottom">낮은 확률</option></select></div>
                             <div class="control-group"><label for="num6">6칸:</label><select id="num6"><option value="random">랜덤</option><option value="top">높은 확률</option><option value="bottom">낮은 확률</option></select></div>
                         </div>
-                        <div class="generation-controls"><label for="num-combinations">생성 조합 수 (1~20):</label><input type="number" id="num-combinations" value="1" min="1" max="20"><button id="generate-button">생성</button></div>
+                        <div class="generation-controls">
+                            <label for="num-combinations">생성 조합 수 (1~5):</label>
+                            <input type="number" id="num-combinations" value="1" min="1" max="5">
+                            <button id="generate-button">생성</button>
+                        </div>
                     </div>
                     <div class="output-frame"><h2>--- 생성된 랜덤 조합 ---</h2><div id="output-text"></div></div>
                 </div>
@@ -68,37 +72,35 @@
                                 <span id="speed-display"></span>
                             </div>
 
-                            <div class="lotto-game-row">
-                                <div class="lotto-game" data-game="A">
-                                    <div class="lotto-game-header">A <button class="lotto-auto-btn" onclick="autoSelect('A', event)">자동</button></div>
-                                    <div class="lotto-game-grid" id="lottoGameA"></div>
+                            <div class="game-area">
+                                <div class="game-boards-container">
+                                    <div class="lotto-game" data-game="A">
+                                        <div class="lotto-game-header">A <button class="lotto-auto-btn" onclick="autoSelect('A', event)">자동</button></div>
+                                        <div class="lotto-game-grid" id="lottoGameA"></div>
+                                    </div>
+                                    <div class="lotto-game-placeholder" id="game-B-placeholder">
+                                        <button id="add-game-btn" class="add-game-style">+ 게임 추가하기</button>
+                                    </div>
+                                    <div class="lotto-game" data-game="B" id="lotto-game-B" style="display: none;">
+                                        <div class="lotto-game-header">B <button class="lotto-auto-btn" onclick="autoSelect('B', event)">자동</button></div>
+                                        <div class="lotto-game-grid" id="lottoGameB"></div>
+                                    </div>
                                 </div>
-                                <div class="stat-detail-result" id="statDetailResultA"></div>
-                            </div>
-                            
-                            <!-- 변경 시작: B 게임은 기본 숨김 처리 -->
-                            <div class="lotto-game-row" id="lotto-game-row-B" style="display: none;">
-                                <div class="lotto-game" data-game="B">
-                                    <div class="lotto-game-header">B <button class="lotto-auto-btn" onclick="autoSelect('B', event)">자동</button></div>
-                                    <div class="lotto-game-grid" id="lottoGameB"></div>
+
+                                <div style="text-align:center; margin-top: 15px;">
+                                    <button class="stat-btn" id="resetBtn" onclick="resetLottoStats()" style="margin-left:0;">초기화</button>
+                                    <button class="stat-btn" id="autoSelectAllBtn" onclick="autoSelectAll()" style="margin-left:12px;">랜덤 번호 조합</button>
+                                    <span id="auto-gen-counter"></span>
                                 </div>
-                                <div class="stat-detail-result" id="statDetailResultB"></div>
+
+                                <div class="result-windows-container">
+                                    <div class="stat-detail-result" id="statDetailResultA"></div>
+                                    <div class="stat-detail-result" id="statDetailResultB" style="display: none;"></div>
+                                </div>
                             </div>
-                            <!-- '게임 추가하기' 버튼 추가 -->
-                            <div id="add-game-container">
-                                <button id="add-game-btn" class="lotto-game add-game-style">
-                                    + 게임 추가하기
-                                </button>
-                            </div>
-                            <!-- 변경 끝 -->
                         </div>
 
-                        <div style="text-align:center;margin:18px 0 8px 0;">
-                            <button class="stat-btn" id="resetBtn" onclick="resetLottoStats()" style="margin-left:0;">초기화</button>
-                            <button class="stat-btn" id="autoSelectAllBtn" onclick="autoSelectAll()" style="margin-left:12px;">랜덤 번호 조합</button>
-                            <span id="auto-gen-counter"></span>
-                        </div>
-                        <div id="userComboProb" style="text-align:center;color:#2c3e50;font-size:16px;margin-bottom:8px;"></div>
+                        <div id="userComboProb" style="text-align:center;color:#2c3e50;font-size:16px;margin-top:15px;margin-bottom:8px;"></div>
                     </div>
                 </div>
 
@@ -109,7 +111,7 @@
                             <label for="exclude-winners-checkbox">역대 1등 당첨 번호 제외하기</label>
                             <input type="checkbox" id="exclude-winners-checkbox" class="adv-checkbox">
                         </div>
-                        <div class="setting-item">
+                        <div class="setting-item setting-item-inline">
                             <label for="min-appearance-select">번호 생성기 '랜덤' 선택 시 최소 등장 횟수</label>
                             <select id="min-appearance-select" class="adv-select">
                                 <option value="0">0회</option>
@@ -136,6 +138,7 @@
                                 <input type="radio" id="speed-x1" name="speed-control" value="1000" checked><label for="speed-x1">x1</label>
                                 <input type="radio" id="speed-x3" name="speed-control" value="333"><label for="speed-x3">x3</label>
                                 <input type="radio" id="speed-x5" name="speed-control" value="200"><label for="speed-x5">x5</label>
+                                <input type="radio" id="speed-x10" name="speed-control" value="100"><label for="speed-x10">x10</label>
                             </div>
                         </div>
                         <div class="setting-item">
@@ -155,19 +158,23 @@
                             <div class="nickname-wrapper">
                                 <label for="nickname-input">닉네임:</label>
                                 <input type="text" id="nickname-input" placeholder="닉네임을 입력하세요" maxlength="10">
+                                <button id="post-button" disabled>글쓰기</button>
                             </div>
-                            <textarea id="community-text" placeholder="20자 내로 글을 남겨보세요..." maxlength="20"></textarea>
-                            <div id="char-counter">0 / 20</div>
+                            <textarea id="community-text" placeholder="30자 내로 글을 남겨보세요..." maxlength="30" rows="2"></textarea>
                             <div class="community-actions">
                                 <div class="image-upload-wrapper">
-                                    <label for="image-upload1" class="image-upload-btn">이미지1</label>
-                                    <input type="file" id="image-upload1" accept="image/*" class="image-upload-input">
-                                    <span id="image-name1" class="image-name"></span>
-                                    <label for="image-upload2" class="image-upload-btn">이미지2</label>
-                                    <input type="file" id="image-upload2" accept="image/*" class="image-upload-input">
-                                    <span id="image-name2" class="image-name"></span>
+                                    <div class="image-upload-item">
+                                        <label for="image-upload1" class="image-upload-btn">이미지1</label>
+                                        <input type="file" id="image-upload1" accept="image/*" class="image-upload-input">
+                                        <span id="image-name1" class="image-name"></span>
+                                    </div>
+                                    <div class="image-upload-item">
+                                        <label for="image-upload2" class="image-upload-btn">이미지2</label>
+                                        <input type="file" id="image-upload2" accept="image/*" class="image-upload-input">
+                                        <span id="image-name2" class="image-name"></span>
+                                    </div>
                                 </div>
-                                <button id="post-button" disabled>글쓰기</button>
+                                <div id="char-counter">0 / 30</div>
                             </div>
                         </div>
                         <div id="community-feed">

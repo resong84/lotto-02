@@ -63,10 +63,10 @@ select:focus, input[type="number"]:focus { outline: none; border-color: #FFC107;
 .tab-button.active { color: #FFC107; border-bottom-color: #FFC107; }
 .tab-content { 
     display: none; 
-    flex-direction: column; /* 탭 레이아웃 기준 통일 */
+    flex-direction: column;
 }
 .tab-content.active { 
-    display: flex; /* block 대신 flex로 변경 */
+    display: flex;
 }
 .settings-section { background: #f8f9fa; border-radius: 15px; padding: 14px 18px; margin-bottom: 18px; }
 .stat-btn { padding: 8px 18px; font-size: 0.95em; border-radius: 8px; border: none; background: #FFC107; color: #333; cursor: pointer; margin-left: 10px; font-weight: bold; transition: background-color 0.3s; }

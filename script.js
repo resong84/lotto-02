@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     startButton.addEventListener('click', () => {
         landingPage.style.display = 'none';
         mainApp.style.display = 'block';
+        // 변경 시작: 앱이 표시된 후 탭 높이 계산 함수 호출
+        adjustTabContentHeight();
     });
     // --- 랜딩 페이지 로직 끝 ---
 
@@ -332,6 +334,15 @@ document.addEventListener('DOMContentLoaded', () => {
             postButton.disabled = true;
         }
     });
+
+    // 변경 시작: '게임 추가하기' 버튼 이벤트 리스너
+    const addGameBtn = document.getElementById('add-game-btn');
+    addGameBtn.addEventListener('click', () => {
+        document.getElementById('lotto-game-row-B').style.display = 'flex';
+        document.getElementById('add-game-container').style.display = 'none';
+        adjustTabContentHeight(); // 탭 높이 재조정
+    });
+    // 변경 끝
 });
 
 
@@ -339,17 +350,32 @@ document.addEventListener('DOMContentLoaded', () => {
 // ===== 탭, 통계, 커뮤니티 등 전역 함수들 =====
 // ==================================================================
 
-// ※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※
-// ※ 중요! 1단계에서 복사한 자신의 Worker 주소를 여기에 붙여넣으세요! ※
-// ※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※
 const WORKER_URL = 'https://lotto-community-api.resong84.workers.dev'; 
-// ※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※※
 
 let selectedGame = 'A';
 let selectedNums = {A:[], B:[]};
 let isWinFound = false;
 let autoGenerateInterval = null;
 let autoGenerateCount = 0;
+
+// 변경 시작: 탭 높이 고정 함수 추가 및 showTab 수정
+function adjustTabContentHeight() {
+    const contentLayer = document.querySelector('.content-layer');
+    const tabContents = document.querySelectorAll('.tab-content');
+    let maxHeight = 0;
+
+    tabContents.forEach(tab => {
+        // display를 잠시 block으로 바꿔야 정확한 높이 측정이 가능
+        const originalDisplay = tab.style.display;
+        tab.style.display = 'block';
+        if (tab.scrollHeight > maxHeight) {
+            maxHeight = tab.scrollHeight;
+        }
+        tab.style.display = originalDisplay; // 원래 상태로 복구
+    });
+
+    contentLayer.style.minHeight = `${maxHeight}px`;
+}
 
 function showTab(tabIdx) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -360,7 +386,10 @@ function showTab(tabIdx) {
     if (tabIdx === 4) {
         loadPosts();
     }
+    // 탭 전환 시 높이 재조정
+    adjustTabContentHeight();
 }
+// 변경 끝
 
 function renderLottoPaper() {
     ['A','B'].forEach(game => {
@@ -441,7 +470,7 @@ function autoSelectAll() {
     };
 
     autoGenerateCount = 0; 
-    counterSpan.style.display = 'inline'; 
+    counterSpan.style.display = 'inline-block'; 
     runSingleCycle(); 
 
     if (autoGenerateCheckbox.checked) {
@@ -455,10 +484,12 @@ function autoSelectAll() {
         
         const speed = parseInt(document.querySelector('input[name="speed-control"]:checked').value);
         
-        let speedText = 'x1';
+        // 변경 시작: x1 표시 제거
+        let speedText = '';
         if (speed === 333) speedText = 'x3';
         if (speed === 200) speedText = 'x5';
         document.getElementById('speed-display').textContent = speedText;
+        // 변경 끝
 
         autoGenerateInterval = setInterval(() => {
             runSingleCycle();
@@ -488,6 +519,7 @@ function playWinSound() {
     }
 }
 
+// 변경 시작: 리셋 시 B 게임판과 추가 버튼 상태도 초기화
 function resetLottoStats() {
     if (autoGenerateInterval) {
         clearInterval(autoGenerateInterval);
@@ -507,7 +539,13 @@ function resetLottoStats() {
     const counterSpan = document.getElementById('auto-gen-counter');
     counterSpan.textContent = '';
     counterSpan.style.display = 'none';
+
+    // B 게임판과 추가 버튼 상태 초기화
+    document.getElementById('lotto-game-row-B').style.display = 'none';
+    document.getElementById('add-game-container').style.display = 'block';
+    adjustTabContentHeight(); // 탭 높이 재조정
 }
+// 변경 끝
 
 function getCombinationProbability(numbers) {
     let sum = 0;
@@ -560,8 +598,8 @@ function checkLottoStats() {
                     let part = `<div class="rank-title rank-title-${rank}">${title} (${arr.length}회)</div><ul>`;
                     arr.forEach(item => {
                         const matchedNums = nums;
-                        const winNums = item.numbers.map(n => matchedNums.includes(n) ? `<b>${n}</b>` : n).join(', ');
-                        part += `<li class="partition-${rank}">${item.draw}회 [${winNums}]${item.bonus ? `[${item.bonus}]` : ''}</li>`;
+                        const winNums = item.numbers.map(n => matchedNums.includes(n) ? `<b>${n}</b>` : `<span class="non-winning-num">${n}</span>`).join(', ');
+                        part += `<li class="partition-${rank}">${item.draw}회 [${winNums}]</li>`;
                     });
                     part += '</ul>';
                     return part;

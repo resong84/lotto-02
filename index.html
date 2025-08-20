@@ -65,7 +65,7 @@
                                     <input type="checkbox" id="auto-generate-checkbox">
                                     <span>자동 생성</span>
                                 </label>
-                                <span id="speed-display">x1</span>
+                                <span id="speed-display"></span>
                             </div>
 
                             <div class="lotto-game-row">
@@ -75,13 +75,22 @@
                                 </div>
                                 <div class="stat-detail-result" id="statDetailResultA"></div>
                             </div>
-                            <div class="lotto-game-row">
+                            
+                            <!-- 변경 시작: B 게임은 기본 숨김 처리 -->
+                            <div class="lotto-game-row" id="lotto-game-row-B" style="display: none;">
                                 <div class="lotto-game" data-game="B">
                                     <div class="lotto-game-header">B <button class="lotto-auto-btn" onclick="autoSelect('B', event)">자동</button></div>
                                     <div class="lotto-game-grid" id="lottoGameB"></div>
                                 </div>
                                 <div class="stat-detail-result" id="statDetailResultB"></div>
                             </div>
+                            <!-- '게임 추가하기' 버튼 추가 -->
+                            <div id="add-game-container">
+                                <button id="add-game-btn" class="lotto-game add-game-style">
+                                    + 게임 추가하기
+                                </button>
+                            </div>
+                            <!-- 변경 끝 -->
                         </div>
 
                         <div style="text-align:center;margin:18px 0 8px 0;">

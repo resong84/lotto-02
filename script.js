@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     startButton.addEventListener('click', () => {
         landingPage.style.display = 'none';
         mainApp.style.display = 'block';
-        adjustLayout();
     });
     // --- 랜딩 페이지 로직 끝 ---
 
@@ -186,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let numToGenerate;
         try {
             numToGenerate = parseInt(numCombinationsInput.value);
-            if (isNaN(numToGenerate) || numToGenerate < 1 || numToGenerate > 5) { // 최대값 5로 수정
+            if (isNaN(numToGenerate) || numToGenerate < 1 || numToGenerate > 5) {
                 alert("생성할 조합 개수는 1에서 5 사이의 숫자여야 합니다.");
                 return;
             }
@@ -249,14 +248,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const combinationNumber = generatedCount;
             const spacing = combinationNumber < 10 ? `&nbsp;&nbsp;` : ` `;
-            const combinationText = `<strong>${combinationNumber}:</strong>${spacing}<span class="combination-numbers">[${finalCombinationList.join(', ')}]</span>`;
+            const combinationText = `<strong>${combinationNumber}:</strong>${spacing}<span class="combination-numbers">[ ${finalCombinationList.join(', ')} ]</span>`;
             
             let randomValueText = "";
             if (randomSelectedNumbers.length > 0) {
-                randomValueText = `<span class="random-value">R: ${randomSelectedNumbers.sort((a, b) => a - b).join(', ')}</span>`;
+                randomValueText = `<br><span class="random-value">R: ${randomSelectedNumbers.sort((a, b) => a - b).join(', ')}</span>`;
             }
 
-            resultDiv.innerHTML = `${combinationText} ${randomValueText}`;
+            resultDiv.innerHTML = combinationText + randomValueText;
             outputText.appendChild(resultDiv);
 
             if (generatedCount % 5 === 0 && generatedCount < numToGenerate) {
@@ -311,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     communityText.addEventListener('input', () => {
         const currentLength = communityText.value.length;
-        charCounter.textContent = `${currentLength} / 30`;
+        charCounter.textContent = `${currentLength} / 20`;
     });
     
     imageUpload1.addEventListener('change', () => updateImageName('image-upload1', 'image-name1'));
@@ -338,10 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('lotto-game-B').style.display = 'flex';
         document.getElementById('statDetailResultB').style.display = 'block';
         document.getElementById('game-B-placeholder').style.display = 'none';
-        adjustLayout(); 
     });
-
-    window.addEventListener('resize', adjustLayout);
 
     // --- User Guide Dropdown ---
     const userGuideButton = document.getElementById('user-guide-button');
@@ -354,8 +350,31 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             userGuideButton.textContent = '사용 설명 ▼';
         }
-        adjustLayout(); // Adjust layout when content toggles
     });
+
+    // --- Image Popup Logic ---
+    const popupOverlay = document.getElementById('image-popup-overlay');
+    const popupImage = document.getElementById('popup-image');
+    const closePopupBtn = document.getElementById('close-popup-btn');
+
+    function openImagePopup(imageUrl) {
+        popupImage.src = imageUrl;
+        popupOverlay.style.display = 'flex';
+    }
+
+    function closeImagePopup() {
+        popupOverlay.style.display = 'none';
+        popupImage.src = '';
+    }
+
+    closePopupBtn.addEventListener('click', closeImagePopup);
+    popupOverlay.addEventListener('click', (e) => {
+        if (e.target === popupOverlay) {
+            closeImagePopup();
+        }
+    });
+    // Make it globally accessible for inline event handlers
+    window.openImagePopup = openImagePopup;
 });
 
 
@@ -371,28 +390,10 @@ let isWinFound = false;
 let autoGenerateInterval = null;
 let autoGenerateCount = 0;
 
-function adjustLayout() {
-    const contentLayer = document.querySelector('.content-layer');
-    const tabContents = document.querySelectorAll('.tab-content');
-    let maxHeight = 0;
-
-    tabContents.forEach(tab => {
-        const originalDisplay = tab.style.display;
-        tab.style.position = 'absolute';
-        tab.style.visibility = 'hidden';
-        tab.style.display = 'flex';
-
-        if (tab.scrollHeight > maxHeight) {
-            maxHeight = tab.scrollHeight;
-        }
-
-        tab.style.position = '';
-        tab.style.visibility = '';
-        tab.style.display = originalDisplay;
-    });
-
-    contentLayer.style.minHeight = `${maxHeight}px`;
-}
+// Pagination variables
+let allPosts = [];
+let currentPage = 1;
+const postsPerPage = 5;
 
 function showTab(tabIdx) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -403,7 +404,6 @@ function showTab(tabIdx) {
     if (tabIdx === 4) {
         loadPosts();
     }
-    adjustLayout();
 }
 
 function renderLottoPaper() {
@@ -572,7 +572,6 @@ function resetLottoStats() {
     document.getElementById('lotto-game-B').style.display = 'none';
     document.getElementById('statDetailResultB').style.display = 'none';
     document.getElementById('game-B-placeholder').style.display = 'flex';
-    adjustLayout(); 
 }
 
 function getCombinationProbability(numbers) {
@@ -676,37 +675,145 @@ function updateImageName(inputId, nameId) {
 
 async function loadPosts() {
     const feed = document.getElementById('community-feed');
+    const paginationContainer = document.getElementById('pagination-container');
     feed.innerHTML = '게시글을 불러오는 중...'; 
+    paginationContainer.innerHTML = '';
 
     try {
         const response = await fetch(`${WORKER_URL}/posts`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const posts = await response.json();
+        allPosts = (await response.json()).reverse(); // 최신순으로 정렬
         
-        feed.innerHTML = ''; 
-        if (posts.length === 0) {
-            feed.innerHTML = '<div style="text-align:center; color:#888;">아직 게시글이 없습니다.</div>';
-            return;
-        }
-
-        posts.forEach(post => {
-            const postElement = document.createElement('div');
-            postElement.className = 'community-post';
-
-            const textContainer = post.content ? `<div class="post-text">${post.content.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>` : '';
-            const authorContainer = `<div class="post-author"><strong>${post.nickname.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</strong></div>`;
-            
-            const imagesContainer = '';
-
-            postElement.innerHTML = authorContainer + textContainer + imagesContainer;
-            feed.appendChild(postElement); 
-        });
+        currentPage = 1;
+        displayCurrentPage();
 
     } catch (e) {
         feed.innerHTML = `<div style="text-align:center; color:red;">게시글을 불러오는 데 실패했습니다: ${e.message}</div>`;
     }
+}
+
+function displayCurrentPage() {
+    renderPage(currentPage);
+    renderPagination();
+}
+
+function renderPage(page) {
+    const feed = document.getElementById('community-feed');
+    feed.innerHTML = '';
+
+    if (allPosts.length === 0) {
+        feed.innerHTML = '<div style="text-align:center; color:#888;">아직 게시글이 없습니다.</div>';
+        return;
+    }
+
+    const startIndex = (page - 1) * postsPerPage;
+    const endIndex = startIndex + postsPerPage;
+    const pagePosts = allPosts.slice(startIndex, endIndex);
+
+    pagePosts.forEach(post => {
+        const postElement = document.createElement('div');
+        postElement.className = 'community-post';
+
+        let formattedDate = '';
+        if (post.created_at) {
+            const date = new Date(post.created_at);
+            const year = date.getFullYear().toString().slice(-2);
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            formattedDate = `${year}-${month}-${day} ${hours}:${minutes}`;
+        }
+
+        const partialIp = post.partial_ip || ''; 
+        const safeNickname = post.nickname.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+        const metaParts = [];
+        if (formattedDate) metaParts.push(formattedDate);
+        if (partialIp) metaParts.push(partialIp);
+        const metaString = metaParts.join(' / ');
+
+        let imageButtonHTML = '';
+        const imageUrl = post.image1_url || post.image2_url;
+        if (imageUrl) {
+            // Use a data attribute instead of onclick for better event handling
+            imageButtonHTML = `<button class="view-image-btn" data-image-url="${imageUrl}">이미지</button>`;
+        }
+
+        const postHTML = `
+            <div class="post-left">
+                <div class="post-author">
+                    <span><strong>${safeNickname}</strong></span>
+                    <span class="post-meta">${metaString}</span>
+                </div>
+                ${imageButtonHTML}
+            </div>
+            <div class="post-right">
+                <div class="post-text">${post.content ? post.content.replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''}</div>
+            </div>
+        `;
+        
+        postElement.innerHTML = postHTML;
+        feed.appendChild(postElement); 
+    });
+
+    // Add event listeners to the newly created image buttons
+    feed.querySelectorAll('.view-image-btn').forEach(button => {
+        button.addEventListener('click', (event) => {
+            const url = event.currentTarget.dataset.imageUrl;
+            if (url) {
+                window.openImagePopup(url);
+            }
+        });
+    });
+}
+
+function renderPagination() {
+    const paginationContainer = document.getElementById('pagination-container');
+    paginationContainer.innerHTML = '';
+    const totalPages = Math.ceil(allPosts.length / postsPerPage);
+
+    if (totalPages <= 1) return;
+
+    const prevButton = document.createElement('button');
+    prevButton.textContent = '이전';
+    prevButton.className = 'page-btn';
+    prevButton.disabled = currentPage === 1;
+    prevButton.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            displayCurrentPage();
+        }
+    });
+    paginationContainer.appendChild(prevButton);
+
+    for (let i = 1; i <= totalPages; i++) {
+        const pageButton = document.createElement('button');
+        pageButton.textContent = i;
+        pageButton.className = 'page-btn';
+        if (i === currentPage) {
+            pageButton.classList.add('active');
+        }
+        pageButton.addEventListener('click', () => {
+            currentPage = i;
+            displayCurrentPage();
+        });
+        paginationContainer.appendChild(pageButton);
+    }
+
+    const nextButton = document.createElement('button');
+    nextButton.textContent = '다음';
+    nextButton.className = 'page-btn';
+    nextButton.disabled = currentPage === totalPages;
+    nextButton.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            displayCurrentPage();
+        }
+    });
+    paginationContainer.appendChild(nextButton);
 }
 
 function validateNickname(nickname) {
@@ -792,7 +899,7 @@ async function createPost() {
         document.getElementById('community-text').value = '';
         document.getElementById('image-upload1').value = '';
         document.getElementById('image-upload2').value = '';
-        document.getElementById('char-counter').textContent = '0 / 30';
+        document.getElementById('char-counter').textContent = '0 / 20';
         updateImageName('image-upload1', 'image-name1');
         updateImageName('image-upload2', 'image-name2');
 

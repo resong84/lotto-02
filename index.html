@@ -183,14 +183,15 @@
 
                 <!-- 탭 4: 커뮤니티 -->
                 <div id="tab4" class="tab-content">
-                    <div class="community-container">
+                    <div class="input-frame">
+                        <h2>커뮤니티 글쓰기</h2>
                         <div class="community-post-box">
                             <div class="nickname-wrapper">
                                 <label for="nickname-input">닉네임:</label>
                                 <input type="text" id="nickname-input" placeholder="닉네임을 입력하세요" maxlength="10">
                                 <button id="post-button">글쓰기</button>
                             </div>
-                            <textarea id="community-text" placeholder="30자 내로 글을 남겨보세요..." maxlength="30" rows="2"></textarea>
+                            <textarea id="community-text" placeholder="20자 내로 글을 남겨보세요..." maxlength="20" rows="2"></textarea>
                             <div class="community-actions">
                                 <div class="image-upload-wrapper">
                                     <div class="image-upload-item">
@@ -204,11 +205,17 @@
                                         <span id="image-name2" class="image-name"></span>
                                     </div>
                                 </div>
-                                <div id="char-counter">0 / 30</div>
+                                <div id="char-counter">0 / 20</div>
                             </div>
                         </div>
+                    </div>
+                    <div class="output-frame">
+                        <h2>--- 최근 글 ---</h2>
                         <div id="community-feed">
                            <!-- 게시글이 여기에 추가됩니다. -->
+                        </div>
+                        <div id="pagination-container">
+                            <!-- 페이지 버튼이 여기에 추가됩니다. -->
                         </div>
                     </div>
                 </div>
@@ -217,6 +224,14 @@
         </div>
     </div>
     
+    <!-- 이미지 팝업용 모달 -->
+    <div id="image-popup-overlay" class="image-popup-overlay">
+        <div class="image-popup-content">
+            <span id="close-popup-btn" class="close-popup-btn">&times;</span>
+            <img id="popup-image" src="" alt="확대 이미지">
+        </div>
+    </div>
+
     <audio id="winSound" src="win-sound.mp3" preload="auto"></audio>
 
     <script src="lottoHistory.js"></script> 

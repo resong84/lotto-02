@@ -342,6 +342,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('resize', adjustLayout);
+
+    // --- User Guide Dropdown ---
+    const userGuideButton = document.getElementById('user-guide-button');
+    const userGuideContent = document.getElementById('user-guide-content');
+
+    userGuideButton.addEventListener('click', () => {
+        userGuideContent.classList.toggle('show');
+        if (userGuideContent.classList.contains('show')) {
+            userGuideButton.textContent = '사용 설명 ▲';
+        } else {
+            userGuideButton.textContent = '사용 설명 ▼';
+        }
+        adjustLayout(); // Adjust layout when content toggles
+    });
 });
 
 
@@ -394,9 +408,15 @@ function showTab(tabIdx) {
 
 function renderLottoPaper() {
     ['A','B'].forEach(game => {
-        const grid = document.getElementById('lottoGame'+game);
-        if (!grid) return;
-        grid.innerHTML = '';
+        const grid1 = document.getElementById('lottoGame' + game + '_row1');
+        const grid2 = document.getElementById('lottoGame' + game + '_row2');
+        const grid3 = document.getElementById('lottoGame' + game + '_row3');
+        if (!grid1 || !grid2 || !grid3) return;
+        
+        grid1.innerHTML = '';
+        grid2.innerHTML = '';
+        grid3.innerHTML = '';
+
         for(let i = 1; i <= 45; i++) {
             const btn = document.createElement('div');
             btn.className = 'lotto-num';
@@ -419,7 +439,14 @@ function renderLottoPaper() {
                 renderLottoPaper();
                 checkLottoStats();
             };
-            grid.appendChild(btn);
+            
+            if (i <= 15) {
+                grid1.appendChild(btn);
+            } else if (i <= 30) {
+                grid2.appendChild(btn);
+            } else {
+                grid3.appendChild(btn);
+            }
         }
         const gameDiv = document.querySelector(`.lotto-game[data-game="${game}"]`);
         if(selectedGame === game) {
@@ -532,7 +559,8 @@ function resetLottoStats() {
     document.getElementById('rank-slider').value = 4;
     updateSliderTrack();
     renderLottoPaper();
-    document.getElementById('userComboProb').innerHTML = '';
+    document.getElementById('probDisplayA').innerHTML = '';
+    document.getElementById('probDisplayB').innerHTML = '';
     document.getElementById('statDetailResultA').innerHTML = '';
     document.getElementById('statDetailResultB').innerHTML = '';
     
@@ -563,7 +591,6 @@ function getCombinationProbability(numbers) {
 function checkLottoStats() {
     isWinFound = false;
     const maxRank = parseInt(document.getElementById('rank-slider').value);
-    let probArr = [];
     
     if (typeof lottoHistory === 'undefined') {
         console.error("lottoHistory.js 파일이 로드되지 않았습니다.");
@@ -573,11 +600,12 @@ function checkLottoStats() {
     ['A','B'].forEach(game => {
         const nums = selectedNums[game];
         const resultContainer = document.getElementById(`statDetailResult${game}`);
+        const probDisplay = document.getElementById(`probDisplay${game}`);
         let gameHtml = '';
 
         if (nums.length === 6) {
             const prob = getCombinationProbability(nums);
-            probArr.push(`${game}: <b>${prob}%</b>`);
+            probDisplay.innerHTML = `<strong>조합 확률:</strong> ${prob}%`;
             let first = [], second = [], third = [], fourth = [];
             
             for (let i = 0; i < lottoHistory.length; i++) {
@@ -619,10 +647,9 @@ function checkLottoStats() {
             resultContainer.innerHTML = gameHtml || '<div style="color:#888;text-align:center;padding-top:25px;">일치 내역이 없습니다.</div>';
         } else {
             resultContainer.innerHTML = '';
+            probDisplay.innerHTML = '';
         }
     });
-
-    document.getElementById('userComboProb').innerHTML = probArr.length > 0 ? `해당 숫자가 조합될 확률 - ${probArr.join(', ')}` : '';
 }
 
 function updateSliderTrack() {
